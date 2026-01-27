@@ -1,0 +1,40 @@
+{
+  "name": "ram360",
+  "version": "1.0.0",
+  "description": "Attendance sync system",
+  "main": "server.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.js",
+    "build": "node build.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "axios": "^0.27.2",
+    "dotenv": "^17.2.3",
+    "express": "^4.19.2",
+    "mssql": "^10.0.1",
+    "tedious": "^18.2.0",
+    "node-cron": "^3.0.3"
+  },
+  "devDependencies": {
+    "pkg": "^5.8.1"
+  },
+  "pkg": {
+    "targets": [
+      "node18-win-x64"
+    ],
+    "scripts": [
+      "server.js",
+      "model/**/*.js"
+    ],
+    "assets": [
+      ".env",
+      "logs/**/*"
+    ],
+    "outputPath": "dist"
+  }
+}

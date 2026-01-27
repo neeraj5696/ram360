@@ -1,0 +1,66 @@
+[20:40:47] 🔄 [APP-STARTUP] License system initialized - Expiry: 2026-03-31
+[20:40:47] 🔄 [LICENSE-CHECK] Current: Tue Jan 27 2026 | Expiry: Tue Mar 31 2026 | Status: ✓ VALID
+[20:40:47] ✅ [APP-STARTUP] ✓ License is valid - Application starting
+[20:40:47] 🚀 Server started on port http://localhost:5000
+[20:40:48] 🔄 [CHECKPOINT-LOAD-1] Loading sync state module
+[20:40:48] ✅ [CHECKPOINT-LOAD-2] Found existing sync state file
+[20:40:48] ✅ [CHECKPOINT-LOAD-3] Loaded all table sync states
+[20:40:48] ✅ Loaded sync states for tables: T_LG202601,T_LG202512
+[20:40:48] 🚀 Attendance Sync System Started
+[20:40:48] 📅 Running every 5 minutes
+[20:40:48] ℹ️  initial sync
+[20:40:48] 🔄 [CHECKPOINT-1] Starting syncAttendance module
+[20:40:48] 🔄 [CHECKPOINT-LICENSE-CHECK] Checking license validity before sync
+[20:40:48] 🔄 [LICENSE-CHECK] Current: Tue Jan 27 2026 | Expiry: Tue Mar 31 2026 | Status: ✓ VALID
+[20:40:48] ✅ [CHECKPOINT-LICENSE-OK] ✓ License is valid, proceeding with sync
+[20:40:48] 🔄 [CHECKPOINT-2] Getting current table name
+[20:40:48] ✅ [CHECKPOINT-3] Using table: T_LG202601
+[20:40:48] 🔄 [CHECKPOINT-LOAD-TABLE-1] Loading sync state for table: T_LG202601
+[20:40:48] ✅ [CHECKPOINT-LOAD-TABLE-2] Found sync state for T_LG202601: 6458
+[20:40:48] ✅ [CHECKPOINT-4] Current lastSyncId for T_LG202601: 6458
+[20:40:48] 🔄 [CHECKPOINT-5] Checking if table exists
+[20:40:49] ✅ [CHECKPOINT-7] Table exists
+[20:40:49] 🔄 [CHECKPOINT-8] Fetching records with EVTLGUID as primary key
+[20:40:49] 🔄 [CHECKPOINT-8A] Filtering by event types: 4865, 4867
+[20:40:49] ✅ records found: [{"UniqueID":6462,"server_time":"2026-01-07T13:22:38.000Z","device_time":1767772356,"user_id":"2024091801","event_type":4865,"device_id":541654478},{"UniqueID":6466,"server_time":"2026-01-07T13:22:41.000Z","device_time":1767772359,"user_id":"2024083001","event_type":4865,"device_id":939342251},{"UniqueID":6469,"server_time":"2026-01-07T13:24:34.000Z","device_time":1767772474,"user_id":"2024091801","event_type":4865,"device_id":538774407},{"UniqueID":6472,"server_time":"2026-01-07T13:27:08.000Z","device_time":1767772629,"user_id":"2024041301","event_type":4865,"device_id":538774407},{"UniqueID":6475,"server_time":"2026-01-07T13:27:16.000Z","device_time":1767772636,"user_id":"2025120101","event_type":4865,"device_id":538774407},{"UniqueID":6482,"server_time":"2026-01-07T13:28:33.000Z","device_time":1767772713,"user_id":"2025111101","event_type":4865,"device_id":538774407},{"UniqueID":6485,"server_time":"2026-01-07T13:30:03.000Z","device_time":1767772800,"user_id":"2025123001","event_type":4865,"device_id":541654478},{"UniqueID":6488,"server_time":"2026-01-07T13:31:32.000Z","device_time":1767772890,"user_id":"2008021601","event_type":4865,"device_id":541654478},{"UniqueID":6491,"server_time":"2026-01-07T13:33:26.000Z","device_time":1767773007,"user_id":"2008021601","event_type":4865,"device_id":538774407},{"UniqueID":6494,"server_time":"2026-01-07T13:36:20.000Z","device_time":1767773180,"user_id":"2008040102","event_type":4865,"device_id":538774407},{"UniqueID":6497,"server_time":"2026-01-07T13:36:28.000Z","device_time":1767773186,"user_id":"2008060101","event_type":4865,"device_id":939342251},{"UniqueID":6500,"server_time":"2026-01-07T13:36:42.000Z","device_time":1767773202,"user_id":"2008060101","event_type":4865,"device_id":538774407},{"UniqueID":6503,"server_time":"2026-01-07T13:37:46.000Z","device_time":1767773265,"user_id":"2008060101","event_type":4865,"device_id":541654478},{"UniqueID":6506,"server_time":"2026-01-07T13:38:01.000Z","device_time":1767773281,"user_id":"2008060101","event_type":4867,"device_id":538210081},{"UniqueID":6509,"server_time":"2026-01-07T13:39:38.000Z","device_time":1767773376,"user_id":"2011060101","event_type":4865,"device_id":939342251},{"UniqueID":6512,"server_time":"2026-01-07T13:42:12.000Z","device_time":1767773531,"user_id":"2024083001","event_type":4867,"device_id":538210081},{"UniqueID":6515,"server_time":"2026-01-07T13:42:43.000Z","device_time":1767773561,"user_id":"2008060101","event_type":4865,"device_id":939342251},{"UniqueID":6519,"server_time":"2026-01-07T13:43:33.000Z","device_time":1767773611,"user_id":"2008021601","event_type":4865,"device_id":541654478},{"UniqueID":6522,"server_time":"2026-01-07T13:43:44.000Z","device_time":1767773624,"user_id":"2008021601","event_type":4867,"device_id":538210081},{"UniqueID":6525,"server_time":"2026-01-07T13:48:45.000Z","device_time":1767773922,"user_id":"2024041301","event_type":4865,"device_id":541654478},{"UniqueID":6528,"server_time":"2026-01-07T13:49:23.000Z","device_time":1767773961,"user_id":"2024041301","event_type":4865,"device_id":541654478},{"UniqueID":6531,"server_time":"2026-01-07T13:55:47.000Z","device_time":1767774345,"user_id":"2010050101","event_type":4865,"device_id":541654478},{"UniqueID":6534,"server_time":"2026-01-07T13:57:55.000Z","device_time":1767774475,"user_id":"2010050101","event_type":4867,"device_id":538210081},{"UniqueID":6537,"server_time":"2026-01-07T13:58:58.000Z","device_time":1767774536,"user_id":"2010050101","event_type":4865,"device_id":939342251},{"UniqueID":6540,"server_time":"2026-01-07T13:59:09.000Z","device_time":1767774550,"user_id":"2010050101","event_type":4865,"device_id":538774407},{"UniqueID":6551,"server_time":"2026-01-07T14:03:30.000Z","device_time":1767774809,"user_id":"2011090101","event_type":4865,"device_id":939342251},{"UniqueID":6554,"server_time":"2026-01-07T14:03:42.000Z","device_time":1767774822,"user_id":"2011090101","event_type":4865,"device_id":538774407},{"UniqueID":6557,"server_time":"2026-01-07T14:04:23.000Z","device_time":1767774863,"user_id":"2025123001","event_type":4865,"device_id":538774407},{"UniqueID":6560,"server_time":"2026-01-07T14:05:39.000Z","device_time":1767774937,"user_id":"2011090101","event_type":4865,"device_id":541654478},{"UniqueID":6563,"server_time":"2026-01-07T14:05:57.000Z","device_time":1767774955,"user_id":"2011090101","event_type":4867,"device_id":538210081},{"UniqueID":6566,"server_time":"2026-01-07T14:06:28.000Z","device_time":1767774988,"user_id":"2008060101","event_type":4865,"device_id":538774407},{"UniqueID":6569,"server_time":"2026-01-07T14:08:12.000Z","device_time":1767775090,"user_id":"2008060101","event_type":4865,"device_id":541654478},{"UniqueID":6572,"server_time":"2026-01-07T14:08:25.000Z","device_time":1767775104,"user_id":"2008060101","event_type":4867,"device_id":538210081},{"UniqueID":6575,"server_time":"2026-01-07T14:08:58.000Z","device_time":1767775137,"user_id":"2011090101","event_type":4865,"device_id":939342251},{"UniqueID":6578,"server_time":"2026-01-07T14:10:32.000Z","device_time":1767775231,"user_id":"2011090101","event_type":4867,"device_id":538210081},{"UniqueID":6581,"server_time":"2026-01-07T14:11:23.000Z","device_time":1767775281,"user_id":"2024091801","event_type":4865,"device_id":541654478},{"UniqueID":6584,"server_time":"2026-01-07T14:13:02.000Z","device_time":1767775380,"user_id":"2008060101","event_type":4865,"device_id":939342251},{"UniqueID":6587,"server_time":"2026-01-07T14:13:09.000Z","device_time":1767775388,"user_id":"2025082102","event_type":4865,"device_id":541676073},{"UniqueID":6590,"server_time":"2026-01-07T14:13:14.000Z","device_time":1767775395,"user_id":"2008060101","event_type":4865,"device_id":538774407},{"UniqueID":6596,"server_time":"2026-01-07T14:14:56.000Z","device_time":1767775495,"user_id":"2025082102","event_type":4865,"device_id":541676073},{"UniqueID":6599,"server_time":"2026-01-07T14:17:26.000Z","device_time":1767775644,"user_id":"2024041301","event_type":4865,"device_id":541654478},{"UniqueID":6602,"server_time":"2026-01-07T14:18:21.000Z","device_time":1767775700,"user_id":"2008060101","event_type":4865,"device_id":541654478},{"UniqueID":6605,"server_time":"2026-01-07T14:18:36.000Z","device_time":1767775714,"user_id":"2008060101","event_type":4867,"device_id":538210081},{"UniqueID":6608,"server_time":"2026-01-07T14:22:38.000Z","device_time":1767775958,"user_id":"2024091801","event_type":4865,"device_id":538774407},{"UniqueID":6611,"server_time":"2026-01-07T14:22:45.000Z","device_time":1767775963,"user_id":"2008060101","event_type":4865,"device_id":939342251},{"UniqueID":6614,"server_time":"2026-01-07T14:22:56.000Z","device_time":1767775976,"user_id":"2008060101","event_type":4865,"device_id":538774407},{"UniqueID":6617,"server_time":"2026-01-07T14:23:28.000Z","device_time":1767776009,"user_id":"2024041301","event_type":4865,"device_id":538774407},{"UniqueID":6620,"server_time":"2026-01-07T14:24:47.000Z","device_time":1767776085,"user_id":"2008021601","event_type":4865,"device_id":939342251},{"UniqueID":6623,"server_time":"2026-01-07T14:25:40.000Z","device_time":1767776138,"user_id":"2008021601","event_type":4867,"device_id":538210081},{"UniqueID":6626,"server_time":"2026-01-07T14:25:51.000Z","device_time":1767776150,"user_id":"2008021601","event_type":4865,"device_id":939342251}]
+[20:40:49] ✅ [CHECKPOINT-9] Found 50 new records
+[20:40:49] ✅ [CHECKPOINT-11] First record: {"UniqueID":6462,"server_time":"2026-01-07T13:22:38.000Z","device_time":1767772356,"user_id":"2024091801","event_type":4865,"device_id":541654478}
+[20:40:49] 🔄 [CHECKPOINT-12] Saving sync state with maxId: 6626
+[20:40:49] 🔄 [CHECKPOINT-SAVE-1] Saving sync state for table: T_LG202601 with ID: 6626
+[20:40:49] ✅ [CHECKPOINT-SAVE-2] Sync state saved successfully
+[20:40:49] ✅ [CHECKPOINT-SAVE-3] File contents: {"tables":{"T_LG202601":{"lastId":6626,"lastSync":"2026-01-27T15:10:49.411Z"},"T_LG202512":{"lastId":30100,"lastSync":"2026-01-27T10:36:41.010Z"}}}
+[20:40:49] ✅ [CHECKPOINT-13] Updated sync state for T_LG202601 to EVTLGUID: 6626
+[20:40:49] 🔄 [CHECKPOINT-14] Transforming data for API
+[20:40:49] ✅ [CHECKPOINT-15] Data transformed, sample: {"EmployeeID":"2024091801","AttendanceDateTime":"2026-01-07 13:22","ioFlag":"O","UniqueID":"6462","IsDuplicate":"N"}
+[20:40:49] ✅ [CHECKPOINT-16] Ready to push 50 records to API
+[20:40:49] 🔄 [CHECKPOINT-17] Calling API push
+[20:40:49] 🔄 [CHECKPOINT-API-1] pushToAPI module started
+[20:40:49] 🔄 [CHECKPOINT-API-3] API URL: https://integrationrsmart.ramp360.in/RsmartInterface/Ramp360/StaffAttendance
+[20:40:49] 🔄 [CHECKPOINT-API-4] Pushing 50 records one by one
+[20:40:49] 🔄 [CHECKPOINT-API-RECORD-0] Pushing record 1/50: EmployeeID=2024091801
+[20:40:49] ❌ [CHECKPOINT-API-FAILED-0] Record 1 failed. Employee: 2024091801, Error: invalid employee number.
+[20:40:49] 🔄 [CHECKPOINT-API-RECORD-1] Pushing record 2/50: EmployeeID=2024083001
+[20:40:50] ❌ [CHECKPOINT-API-FAILED-1] Record 2 failed. Employee: 2024083001, Error: invalid employee number.
+[20:40:50] 🔄 [CHECKPOINT-API-RECORD-2] Pushing record 3/50: EmployeeID=2024091801
+[20:40:50] ❌ [CHECKPOINT-API-FAILED-2] Record 3 failed. Employee: 2024091801, Error: invalid employee number.
+[20:40:50] 🔄 [CHECKPOINT-API-RECORD-3] Pushing record 4/50: EmployeeID=2024041301
+[20:40:50] ❌ [CHECKPOINT-API-FAILED-3] Record 4 failed. Employee: 2024041301, Error: invalid employee number.
+[20:40:50] 🔄 [CHECKPOINT-API-RECORD-4] Pushing record 5/50: EmployeeID=2025120101
+[20:40:51] ❌ [CHECKPOINT-API-FAILED-4] Record 5 failed. Employee: 2025120101, Error: invalid employee number.
+[20:40:51] 🔄 [CHECKPOINT-API-RECORD-5] Pushing record 6/50: EmployeeID=2025111101
+[20:40:51] ❌ [CHECKPOINT-API-FAILED-5] Record 6 failed. Employee: 2025111101, Error: invalid employee number.
+[20:40:51] 🔄 [CHECKPOINT-API-RECORD-6] Pushing record 7/50: EmployeeID=2025123001
+[20:40:51] ❌ [CHECKPOINT-API-FAILED-6] Record 7 failed. Employee: 2025123001, Error: invalid employee number.
+[20:40:51] 🔄 [CHECKPOINT-API-RECORD-7] Pushing record 8/50: EmployeeID=2008021601
+[20:40:52] ❌ [CHECKPOINT-API-FAILED-7] Record 8 failed. Employee: 2008021601, Error: invalid employee number.
+[20:40:52] 🔄 [CHECKPOINT-API-RECORD-8] Pushing record 9/50: EmployeeID=2008021601
+[20:40:53] ❌ [CHECKPOINT-API-FAILED-8] Record 9 failed. Employee: 2008021601, Error: invalid employee number.
+[20:40:53] 🔄 [CHECKPOINT-API-RECORD-9] Pushing record 10/50: EmployeeID=2008040102
+[20:40:53] ❌ [CHECKPOINT-API-FAILED-9] Record 10 failed. Employee: 2008040102, Error: invalid employee number.
+[20:40:53] 🔄 [CHECKPOINT-API-RECORD-10] Pushing record 11/50: EmployeeID=2008060101
+[20:40:53] ❌ [CHECKPOINT-API-FAILED-10] Record 11 failed. Employee: 2008060101, Error: invalid employee number.
+[20:40:53] 🔄 [CHECKPOINT-API-RECORD-11] Pushing record 12/50: EmployeeID=2008060101
+[20:40:53] ❌ [CHECKPOINT-API-FAILED-11] Record 12 failed. Employee: 2008060101, Error: invalid employee number.
+[20:40:53] 🔄 [CHECKPOINT-API-RECORD-12] Pushing record 13/50: EmployeeID=2008060101
+[20:40:54] ❌ [CHECKPOINT-API-FAILED-12] Record 13 failed. Employee: 2008060101, Error: invalid employee number.
+[20:40:54] 🔄 [CHECKPOINT-API-RECORD-13] Pushing record 14/50: EmployeeID=2008060101
