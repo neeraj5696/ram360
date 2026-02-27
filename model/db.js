@@ -26,12 +26,12 @@ const config = {
 
 const connectDB = async () => {
   try {
-    console.log('Attempting to connect to database with config:', {
-      server: config.server,
-      database: config.database,
-      port: config.port,
-      user: config.user
-    });
+    // console.log('Attempting to connect to database with config:', {
+    //   server: config.server,
+    //   database: config.database,
+    //   port: config.port,
+    //   user: config.user
+    // });
     
     await sql.connect(config);
     console.log("✅ Database connected successfully!");

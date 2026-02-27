@@ -16,9 +16,10 @@
     "axios": "^0.27.2",
     "dotenv": "^17.2.3",
     "express": "^4.19.2",
+    "form-data": "^4.0.5",
     "mssql": "^10.0.1",
-    "tedious": "^18.2.0",
-    "node-cron": "^3.0.3"
+    "node-cron": "^3.0.3",
+    "tedious": "^18.2.0"
   },
   "devDependencies": {
     "pkg": "^5.8.1"
