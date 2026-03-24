@@ -25,15 +25,15 @@ const stateFile = path.join(basePath, './sync_state.json');
 
 // Load all sync state data
 const loadAllSyncState = () => {
-  // logger.checkpoint('[CHECKPOINT-LOAD-1] Loading sync state module');
+  logger.checkpoint('[CHECKPOINT-LOAD-1] Loading sync state module');
   try {
     if (fs.existsSync(stateFile)) {
-      // logger.success('[CHECKPOINT-LOAD-2] Found existing sync state file');
+      logger.success('[CHECKPOINT-LOAD-2] Found existing sync state file');
       const data = JSON.parse(fs.readFileSync(stateFile, 'utf8'));
-      //  logger.success(`[CHECKPOINT-LOAD-3] Loaded all table sync states`);
+      logger.success(`[CHECKPOINT-LOAD-3] Loaded all table sync states`);
       return data;
     } else {
-      //  logger.warning('[CHECKPOINT-LOAD-4] No sync state file found, starting fresh');
+      logger.warning('[CHECKPOINT-LOAD-4] No sync state file found, starting fresh');
       return { tables: {} };
     }
   } catch (error) {
@@ -44,14 +44,14 @@ const loadAllSyncState = () => {
 
 // Load sync state for specific table
 const loadSyncState = (tableName) => {
-  //  logger.checkpoint(`[CHECKPOINT-LOAD-TABLE-1] Loading sync state for table: ${tableName}`);
+  logger.checkpoint(`[CHECKPOINT-LOAD-TABLE-1] Loading sync state for table: ${tableName}`);
   try {
     if (fs.existsSync(stateFile)) {
       const data = JSON.parse(fs.readFileSync(stateFile, 'utf8'));
       const tableData = data.tables?.[tableName];
 
       if (tableData) {
-        // logger.success(`[CHECKPOINT-LOAD-TABLE-2] Found sync state for ${tableName}: ${tableData.lastId}`);
+        logger.success(`[CHECKPOINT-LOAD-TABLE-2] Found sync state for ${tableName}: ${tableData.lastId}`);
         return tableData.lastId || '';
       } else {
         logger.warning(`[CHECKPOINT-LOAD-TABLE-3] No sync state for ${tableName}, starting from empty string`);
@@ -69,7 +69,7 @@ const loadSyncState = (tableName) => {
 
 // Save sync state for specific table
 const saveSyncState = (tableName, id) => {
-  //  logger.checkpoint(`[CHECKPOINT-SAVE-1] Saving sync state for table: ${tableName} with ID: ${id}`);
+  logger.checkpoint(`[CHECKPOINT-SAVE-1] Saving sync state for table: ${tableName} with ID: ${id}`);
   try {
     let stateData = { tables: {} };
 
@@ -88,8 +88,8 @@ const saveSyncState = (tableName, id) => {
     };
 
     fs.writeFileSync(stateFile, JSON.stringify(stateData, null, 2));
-    //  logger.success(`[CHECKPOINT-SAVE-2] Sync state saved successfully`);
-    // logger.success(`[CHECKPOINT-SAVE-3] File contents: ${JSON.stringify(stateData)}`);
+    logger.success(`[CHECKPOINT-SAVE-2] Sync state saved successfully`);
+    logger.success(`[CHECKPOINT-SAVE-3] File contents: ${JSON.stringify(stateData)}`);
   } catch (error) {
     logger.error('[CHECKPOINT-SAVE-ERROR] Error saving sync state: ' + error.message);
   }
@@ -97,22 +97,22 @@ const saveSyncState = (tableName, id) => {
 
 // Fetch valid punches incrementally
 const fetchValidPunches = async (tableName, lastSyncId) => {
-  // logger.checkpoint('[CHECKPOINT-8] Fetching records with EVTLGUID as primary key');
+  logger.checkpoint('[CHECKPOINT-8] Fetching records with EVTLGUID as primary key');
   try {
     const request = new sql.Request();
-
+    
     // Load event types from environment
     const eventTypeInStr = process.env.EVENT_TYPE_IN || '4865,4867';
     // Remove brackets if present and parse event types
     const cleanedStr = eventTypeInStr.replace(/[\[\]]/g, '');
     const eventTypes = cleanedStr.split(',').map(e => parseInt(e.trim())).filter(e => !isNaN(e));
-    // logger.checkpoint(`[CHECKPOINT-8A] Filtering by event types: ${eventTypes.join(', ')}`);
-
+    logger.checkpoint(`[CHECKPOINT-8A] Filtering by event types: ${eventTypes.join(', ')}`);
+    
     if (eventTypes.length === 0) {
       logger.error('[CHECKPOINT-8B] No valid event types found in ENV');
       return [];
     }
-
+    
     const query = `
       SELECT TOP 50 
         EVTLGUID as UniqueID,
@@ -131,12 +131,12 @@ const fetchValidPunches = async (tableName, lastSyncId) => {
     request.input('lastId', sql.VarChar, lastSyncId.toString());
     const result = await request.query(query);
     const records = result.recordset;
+   
+    logger.success('records found: ' + JSON.stringify(records));
 
-    //logger.success('records found: ' + JSON.stringify(records));
-
-    // logger.success(`[CHECKPOINT-9] Found ${records.length} new records`);
+    logger.success(`[CHECKPOINT-9] Found ${records.length} new records`);
     if (records.length > 0) {
-      // logger.success('[CHECKPOINT-11] First record: ' + JSON.stringify(records[0]));
+      logger.success('[CHECKPOINT-11] First record: ' + JSON.stringify(records[0]));
     }
     return records;
   } catch (error) {
@@ -147,7 +147,7 @@ const fetchValidPunches = async (tableName, lastSyncId) => {
 
 // Push data to external API - one record at a time
 const pushToAPI = async (dataArray) => {
-  // logger.checkpoint('[CHECKPOINT-API-1] pushToAPI module started');
+  logger.checkpoint('[CHECKPOINT-API-1] pushToAPI module started');
 
   if (!dataArray || dataArray.length === 0) {
     logger.warning('[CHECKPOINT-API-2] No data to push');
@@ -157,8 +157,8 @@ const pushToAPI = async (dataArray) => {
   const apiUrl = process.env.EXTERNAL_API_URL || 'API URL NO LOADED... CHECK ENV';
   const apiToken = process.env.EXTERNAL_API_TOKEN || '';
 
-  // logger.checkpoint(`[CHECKPOINT-API-3] API URL: ${apiUrl}`);
-  // logger.checkpoint(`[CHECKPOINT-API-4] Pushing ${dataArray.length} records one by one`);
+  logger.checkpoint(`[CHECKPOINT-API-3] API URL: ${apiUrl}`);
+  logger.checkpoint(`[CHECKPOINT-API-4] Pushing ${dataArray.length} records one by one`);
 
   let successCount = 0;
   let failedCount = 0;
@@ -168,38 +168,23 @@ const pushToAPI = async (dataArray) => {
   for (let i = 0; i < dataArray.length; i++) {
     const record = dataArray[i];
     try {
-      // logger.checkpoint(`[CHECKPOINT-API-RECORD-${i}] Pushing record ${i + 1}/${dataArray.length}: EmployeeID=${record.EmployeeID}`);
+      logger.checkpoint(`[CHECKPOINT-API-RECORD-${i}] Pushing record ${i + 1}/${dataArray.length}: EmployeeID=${record.EmployeeID}`);
 
-
-      const form = new FormData();
-
-      form.append('door', '2049');
-      form.append('call_id', 'magnumtesting');
-      form.append('audio', fs.createReadStream('./voicefiletest.wav'));
-
-
-
-
-
-      const response = await axios.post(apiUrl, form, {
+      const response = await axios.post(apiUrl, record, {
         headers: {
-          'X-API-Token': apiToken,
-
+          'Token': apiToken,
+          'Content-Type': 'application/json',
+          'CompanyCode': 'RAMP360'
         },
         timeout: 30000
       });
 
-      console.log('api response: ' + JSON.stringify(response));
       logger.success(`[CHECKPOINT-API-SUCCESS-${i}] Record ${i + 1} pushed successfully. Status: ${response.status}`);
-
-      logger.success(`[CHECKPOINT-API-SUCCESS-${i + 1}] EmployeeID: ${record.EmployeeID}, DateTime: ${record.AttendanceDateTime}, UniqueID: ${record.UniqueID} - API Response: Status=${response.data.status}, Code=${response.data.statusCode}, Message=${response.data.message}, RsmartID=${response.data.rsmartUniqueId || 'N/A'}`);
       successCount++;
     } catch (error) {
       failedCount++;
-
-      // console.log("error aa gaya ",error);
       const errorMsg = error.response?.data?.message || error.message || 'Unknown error';
-      logger.error(` Record ${i + 1} failed. Employee: ${record.EmployeeID}, Error: ${errorMsg}`);
+      logger.error(`[CHECKPOINT-API-FAILED-${i}] Record ${i + 1} failed. Employee: ${record.EmployeeID}, Error: ${errorMsg}`);
 
       // Store failed record for later analysis
       failedRecords.push({
@@ -222,11 +207,11 @@ const pushToAPI = async (dataArray) => {
 
 // Main sync job
 const syncAttendance = async () => {
-  // logger.checkpoint('[CHECKPOINT-1] Starting syncAttendance module');
+  logger.checkpoint('[CHECKPOINT-1] Starting syncAttendance module');
 
   try {
     // Check license validity first
-    // logger.checkpoint('[CHECKPOINT-LICENSE-CHECK] Checking license validity before sync');
+    logger.checkpoint('[CHECKPOINT-LICENSE-CHECK] Checking license validity before sync');
     if (!isLicenseValid()) {
       logger.error('[CHECKPOINT-LICENSE-INVALID] ❌ SYNC BLOCKED: License is not valid');
       const status = getLicenseStatus();
@@ -234,25 +219,25 @@ const syncAttendance = async () => {
       logger.error('[CHECKPOINT-LICENSE-EXIT] Exiting process due to invalid license...');
       process.exit(1);
     }
-    // logger.success('[CHECKPOINT-LICENSE-OK] ✓ License is valid, proceeding with sync');
-
-    // logger.checkpoint('[CHECKPOINT-2] Getting current table name');
+    logger.success('[CHECKPOINT-LICENSE-OK] ✓ License is valid, proceeding with sync');
+    
+    logger.checkpoint('[CHECKPOINT-2] Getting current table name');
     const now = new Date();
     const tableName = getTableName(now.getFullYear(), now.getMonth() + 1);
-    //logger.success(`[CHECKPOINT-3] Using table: ${tableName}`);
+    logger.success(`[CHECKPOINT-3] Using table: ${tableName}`);
 
     // Load sync state for this specific table
     const lastSyncId = loadSyncState(tableName);
-    // logger.success(`[CHECKPOINT-4] Current lastSyncId for ${tableName}: ${lastSyncId}`);
+    logger.success(`[CHECKPOINT-4] Current lastSyncId for ${tableName}: ${lastSyncId}`);
 
-    //  logger.checkpoint('[CHECKPOINT-5] Checking if table exists');
+    logger.checkpoint('[CHECKPOINT-5] Checking if table exists');
     const exists = await tableExists(tableName);
 
     if (!exists) {
       logger.error(`[CHECKPOINT-6] Table ${tableName} not found`);
       return;
     }
-    // logger.success('[CHECKPOINT-7] Table exists');
+    logger.success('[CHECKPOINT-7] Table exists');
 
     // Fetch records using function with table-specific sync ID
     const records = await fetchValidPunches(tableName, lastSyncId);
@@ -264,19 +249,20 @@ const syncAttendance = async () => {
 
     // Update sync state with last EVTLGUID for this table
     const maxId = records[records.length - 1].UniqueID;
-    //  logger.checkpoint(`[CHECKPOINT-12] Saving sync state with maxId: ${maxId}`);
+    logger.checkpoint(`[CHECKPOINT-12] Saving sync state with maxId: ${maxId}`);
     saveSyncState(tableName, maxId);
-    //  logger.success(`[CHECKPOINT-13] Updated sync state for ${tableName} to EVTLGUID: ${maxId}`);
+    logger.success(`[CHECKPOINT-13] Updated sync state for ${tableName} to EVTLGUID: ${maxId}`);
 
     // Transform data for API
-    // logger.checkpoint('[CHECKPOINT-14] Transforming data for API');
+    logger.checkpoint('[CHECKPOINT-14] Transforming data for API');
 
 
-    const deviceInId = process.env.DEVICE_IN || 'env load error';
-
+    const deviceInIds = (process.env.DEVICE_IN || '').split(',').map(id => id.trim());
+    const deviceOutIds = (process.env.DEVICE_OUT || '').split(',').map(id => id.trim());
 
     const transformedData = records.map(record => {
-      const ioFlag = String(record.device_id) === String(deviceInId) ? "I" : "O";
+      const deviceId = String(record.device_id);
+      const ioFlag = deviceInIds.includes(deviceId) ? "I" : (deviceOutIds.includes(deviceId) ? "O" : "n/a");
 
       // Convert Unix timestamp (seconds) to formatted date string
       const timestamp = record.device_time;
@@ -301,19 +287,19 @@ const syncAttendance = async () => {
 
 
 
-    // logger.success('[CHECKPOINT-15] Data transformed, sample: ' + JSON.stringify(transformedData[0]));
-    //logger.success(`[CHECKPOINT-16] Ready to push ${transformedData.length} records to API`);
+    logger.success('[CHECKPOINT-15] Data transformed, sample: ' + JSON.stringify(transformedData[0]));
+    logger.success(`[CHECKPOINT-16] Ready to push ${transformedData.length} records to API`);
 
     // Push to API - one record at a time
-    //  logger.checkpoint('[CHECKPOINT-17] Calling API push');
+    logger.checkpoint('[CHECKPOINT-17] Calling API push');
     const pushResult = await pushToAPI(transformedData);
 
     if (pushResult.success) {
-      // logger.success(`[CHECKPOINT-18] All ${pushResult.successCount} records pushed successfully`);
+      logger.success(`[CHECKPOINT-18] All ${pushResult.successCount} records pushed successfully`);
     } else {
       logger.warning(`[CHECKPOINT-18] Some records failed - Success: ${pushResult.successCount}, Failed: ${pushResult.failedCount}`);
       if (pushResult.failed.length > 0) {
-        // logger.warning('[CHECKPOINT-FAILED-RECORDS] Failed records: ' + JSON.stringify(pushResult.failed));
+        logger.warning('[CHECKPOINT-FAILED-RECORDS] Failed records: ' + JSON.stringify(pushResult.failed));
       }
     }
 
@@ -710,9 +696,9 @@ const start = async () => {
     // Status endpoint
     app.get('/status', (req, res) => {
       const syncStates = loadAllSyncState();
-      res.status(200).json({
-        status: 'running',
-        tables: Object.keys(syncStates.tables || {})
+      res.status(200).json({ 
+        status: 'running', 
+        tables: Object.keys(syncStates.tables || {}) 
       });
     });
 
@@ -720,44 +706,44 @@ const start = async () => {
     app.post('/manual-sync', async (req, res) => {
       try {
         // Check license validity first
-        // logger.checkpoint('[MANUAL-SYNC-LICENSE] Checking license validity');
+        logger.checkpoint('[MANUAL-SYNC-LICENSE] Checking license validity');
         if (!isLicenseValid()) {
           logger.error('[MANUAL-SYNC-LICENSE-INVALID] ❌ SYNC BLOCKED: License is not valid');
           const status = getLicenseStatus();
           logger.error('[MANUAL-SYNC-LICENSE-EXIT] Exiting process due to invalid license...');
           process.exit(1);
         }
-        //  logger.success('[MANUAL-SYNC-LICENSE-OK] ✓ License is valid');
-
+        logger.success('[MANUAL-SYNC-LICENSE-OK] ✓ License is valid');
+        
         const dateParam = req.body?.date;
-
+        
         // Set custom date for logging if provided
         if (dateParam) {
           logger.setCustomDate(new Date(dateParam));
         }
-
+        
         logger.checkpoint('[MANUAL-SYNC] Manual sync triggered by user' + (dateParam ? ' for date: ' + dateParam : ''));
-
+        
         // Parse selected date and generate table name from it
         let selectedDate = new Date();
         if (dateParam) {
           selectedDate = new Date(dateParam);
         }
-
+        
         const year = selectedDate.getFullYear();
         const month = selectedDate.getMonth() + 1;
         const tableName = getTableName(year, month);
-        // logger.checkpoint(`[MANUAL-SYNC] Generated table name: ${tableName} from date: ${selectedDate.toDateString()}`);
-
+        logger.checkpoint(`[MANUAL-SYNC] Generated table name: ${tableName} from date: ${selectedDate.toDateString()}`);
+        
         const lastSyncId = loadSyncState(tableName);
         const exists = await tableExists(tableName);
-
+        
         if (!exists) {
-          return res.status(404).json({
-            success: false,
-            successCount: 0,
+          return res.status(404).json({ 
+            success: false, 
+            successCount: 0, 
             failedCount: 0,
-            error: `Table ${tableName} not found for date ${selectedDate.toDateString()}`
+            error: `Table ${tableName} not found for date ${selectedDate.toDateString()}` 
           });
         }
 
@@ -766,7 +752,7 @@ const start = async () => {
         const dateEnd = new Date(year, selectedDate.getMonth(), selectedDate.getDate() + 1);
         const unixStart = Math.floor(dateStart.getTime() / 1000);
         const unixEnd = Math.floor(dateEnd.getTime() / 1000);
-
+        
         logger.checkpoint(`[MANUAL-SYNC] Date range: ${dateStart.toISOString()} to ${dateEnd.toISOString()}`);
         logger.checkpoint(`[MANUAL-SYNC] Unix timestamp range: ${unixStart} to ${unixEnd}`);
 
@@ -775,7 +761,7 @@ const start = async () => {
         const eventTypeInStr = process.env.EVENT_TYPE_IN || '4865,4867';
         const cleanedStr = eventTypeInStr.replace(/[\[\]]/g, '');
         const eventTypes = cleanedStr.split(',').map(e => parseInt(e.trim())).filter(e => !isNaN(e));
-
+        
         const query = `
           SELECT TOP 50 
             EVTLGUID as UniqueID,
@@ -796,7 +782,7 @@ const start = async () => {
         request.input('lastId', sql.VarChar, lastSyncId.toString());
         request.input('dateStart', sql.BigInt, unixStart);
         request.input('dateEnd', sql.BigInt, unixEnd);
-
+        
         logger.checkpoint(`[MANUAL-SYNC] Executing query with date filter...`);
         const result = await request.query(query);
         const records = result.recordset;
@@ -804,11 +790,11 @@ const start = async () => {
         logger.success(`[MANUAL-SYNC] Found ${records.length} records for date ${selectedDate.toDateString()}`);
 
         if (records.length === 0) {
-          return res.json({
-            success: true,
-            successCount: 0,
+          return res.json({ 
+            success: true, 
+            successCount: 0, 
             failedCount: 0,
-            message: `No records found for date ${selectedDate.toDateString()}`
+            message: `No records found for date ${selectedDate.toDateString()}` 
           });
         }
 
@@ -848,11 +834,11 @@ const start = async () => {
       } catch (error) {
         logger.error('[MANUAL-SYNC-ERROR] ' + error.message);
         logger.resetCustomDate();
-        res.status(500).json({
-          success: false,
-          successCount: 0,
+        res.status(500).json({ 
+          success: false, 
+          successCount: 0, 
           failedCount: 0,
-          error: error.message
+          error: error.message 
         });
       }
     });
@@ -868,8 +854,8 @@ const start = async () => {
     });
 
     // Initialize license system
-    // logger.checkpoint('[APP-STARTUP] License system initialized - Expiry: 2026-03-31');
-
+    logger.checkpoint('[APP-STARTUP] License system initialized - Expiry: 2026-03-31');
+    
     if (!isLicenseValid()) {
       logger.error('[APP-STARTUP] ❌ LICENSE INVALID - Application cannot start');
       const licenseStatus = getLicenseStatus();
@@ -878,29 +864,29 @@ const start = async () => {
       logger.error('[APP-STARTUP] Exiting process...');
       process.exit(1);
     }
-
-    // logger.success('[APP-STARTUP] ✓ License is valid - Application starting');
+    
+    logger.success('[APP-STARTUP] ✓ License is valid - Application starting');
 
     await connectDB();
     const syncStates = loadAllSyncState();
-    // logger.success('Loaded sync states for tables: ' + Object.keys(syncStates.tables || {}));
+    logger.success('Loaded sync states for tables: ' + Object.keys(syncStates.tables || {}));
 
-    // logger.rocket('Attendance Sync System Started');
-    //  logger.calendar('Running every 5 minutes');
+    logger.rocket('Attendance Sync System Started');
+    logger.calendar('Running every 5 minutes');
 
     // Schedule every 5 minutes
     cron.schedule('*/5 * * * *', syncAttendance);
 
     // Run initial sync
-    // logger.info('initial sync')
+    logger.info('initial sync')
     await syncAttendance();
 
   } catch (error) {
     logger.warning('Database connection failed - will retry on schedule');
 
     // Still start the scheduler even if DB connection fails
-    //  logger.rocket('Attendance Sync System Started (DB retry mode)');
-    // logger.calendar('Running every 5 minutes');
+    logger.rocket('Attendance Sync System Started (DB retry mode)');
+    logger.calendar('Running every 5 minutes');
     cron.schedule('*/5 * * * *', syncAttendance);
   }
 };
