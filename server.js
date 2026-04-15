@@ -3,7 +3,7 @@ const express = require('express');
 const cron = require('node-cron');
 const axios = require('axios');
 const path = require('path');
-const { connectDB, sql, getTableName, tableExists } = require('./model/db');
+const { connectDB, getPool, sql, getTableName, tableExists } = require('./model/db');
 const fs = require('fs');
 const logger = require('./utils/logger');
 const { isLicenseValid, getLicenseStatus } = require('./license');
@@ -99,9 +99,7 @@ const saveSyncState = (tableName, id) => {
 const fetchValidPunches = async (tableName, lastSyncId) => {
   logger.checkpoint('[CHECKPOINT-8] Fetching records with EVTLGUID as primary key');
   try {
-    const request = new sql.Request();
-    
-    // Load event types from environment
+    const request = (await getPool()).request();
     const eventTypeInStr = process.env.EVENT_TYPE_IN || '4865,4867';
     // Remove brackets if present and parse event types
     const cleanedStr = eventTypeInStr.replace(/[\[\]]/g, '');
@@ -114,7 +112,7 @@ const fetchValidPunches = async (tableName, lastSyncId) => {
     }
     
     const query = `
-      SELECT TOP 50 
+      SELECT TOP 70 
         EVTLGUID as UniqueID,
         SRVDT as server_time,
         DEVDT as device_time, 
@@ -757,7 +755,7 @@ const start = async () => {
         logger.checkpoint(`[MANUAL-SYNC] Unix timestamp range: ${unixStart} to ${unixEnd}`);
 
         // Fetch records from selected date
-        const request = new sql.Request();
+        const request = (await getPool()).request();
         const eventTypeInStr = process.env.EVENT_TYPE_IN || '4865,4867';
         const cleanedStr = eventTypeInStr.replace(/[\[\]]/g, '');
         const eventTypes = cleanedStr.split(',').map(e => parseInt(e.trim())).filter(e => !isNaN(e));
@@ -803,9 +801,11 @@ const start = async () => {
         saveSyncState(tableName, maxId);
 
         // Transform data
-        const deviceInId = process.env.DEVICE_IN || 'env load error';
+        const deviceInIds = (process.env.DEVICE_IN || '').split(',').map(id => id.trim());
+        const deviceOutIds = (process.env.DEVICE_OUT || '').split(',').map(id => id.trim());
         const transformedData = records.map(record => {
-          const ioFlag = String(record.device_id) === String(deviceInId) ? "I" : "O";
+          const deviceId = String(record.device_id);
+          const ioFlag = deviceInIds.includes(deviceId) ? "I" : (deviceOutIds.includes(deviceId) ? "O" : "O");
           const timestamp = record.device_time;
           const date = new Date(timestamp * 1000);
           const formattedDateTime =

@@ -22,23 +22,33 @@ const config = {
     encrypt: true,
     trustServerCertificate: true,
   },
+  pool: {
+    max: 10,
+    min: 2,
+    idleTimeoutMillis: 30000,
+  },
 };
+
+let pool = null;
 
 const connectDB = async () => {
   try {
-    // console.log('Attempting to connect to database with config:', {
-    //   server: config.server,
-    //   database: config.database,
-    //   port: config.port,
-    //   user: config.user
-    // });
-    
-    await sql.connect(config);
-    console.log("✅ Database connected successfully!");
+    if (pool && pool.connected) {
+      return pool;
+    }
+    pool = await new sql.ConnectionPool(config).connect();
+    pool.on('error', err => console.error('❌ Pool error:', err.message));
+    console.log('✅ Database pool connected successfully!');
+    return pool;
   } catch (error) {
-    console.error("❌ Database connection failed:", error);
+    console.error('❌ Database connection failed:', error);
     throw error;
   }
+};
+
+const getPool = async () => {
+  if (pool && pool.connected) return pool;
+  return connectDB();
 };
 
 // Function to generate table name based on month and year
@@ -57,7 +67,7 @@ const fetchDataByMonth = async (year, month, columnName = '*') => {
     const tableName = getTableName(year, month);
     console.log(`Table is ready, start...: ${tableName}`);
 
-    const request = new sql.Request();
+    const request = (await getPool()).request();
     const query = `SELECT ${columnName} FROM [${tableName}]`;
 
     const result = await request.query(query);
@@ -125,7 +135,7 @@ const fetchMultipleMonths = async (months, columnName = '*') => {
 
 const tableExists = async (tableName) => {
   try {
-    const request = new sql.Request();
+    const request = (await getPool()).request();
     request.input('tableName', sql.VarChar, tableName);
 
     const result = await request.query(`
@@ -157,7 +167,7 @@ const createTableIfNotExists = async (destTableName, sourceTableName) => {
 
     console.log(`Creating table [${destTableName}] based on [${sourceTableName}]...`);
     
-    const request = new sql.Request();
+    const request = (await getPool()).request();
     const createQuery = `
       SELECT * INTO [${destTableName}] 
       FROM [${sourceTableName}] 
@@ -181,7 +191,7 @@ const insertDataIntoTable = async (destTableName, data) => {
       return { inserted: 0 };
     }
 
-    const request = new sql.Request();
+    const request = (await getPool()).request();
     
     // Get column names from first row
     const columns = Object.keys(data[0]);
@@ -277,7 +287,8 @@ const startAutoFetchScheduler = (intervalMinutes = 5) => {
 };
 
 module.exports = { 
-  connectDB, 
+  connectDB,
+  getPool,
   sql, 
   getTableName, 
   fetchDataByMonth, 

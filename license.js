@@ -1,6 +1,6 @@
 const logger = require('./utils/logger');
 
-const EXPIRY_DATE = '2026-03-31';
+const EXPIRY_DATE = '2027-03-31';
 
 // Check if license is valid (expiry - current > 0)
 const isLicenseValid = () => {
