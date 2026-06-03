@@ -1,6 +1,6 @@
 module.exports = {
   apps: [{
-    name:'Ram360', // Application name on PM2 list
+    name:'Ram360',
     script:'Ram360.exe',
     cwd: __dirname,
     instances: 1,
@@ -15,6 +15,11 @@ module.exports = {
     out_file: './logs/output.log',
     log_date_format: 'YYYY-MM-DD HH:mm:ss',
     merge_logs: true,
-    restart_delay: 4000
+    restart_delay: 4000,
+    log_type: 'json',
+    rotate_interval: '0 0 1 * *',
+    max_size: '10M',
+    retain: 3,
+    compress: true
   }]
 };

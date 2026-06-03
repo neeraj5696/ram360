@@ -8,11 +8,9 @@ const fs = require('fs');
 const logger = require('./utils/logger');
 const { isLicenseValid, getLicenseStatus } = require('./license');
 
-// Initialize Express app
+
 const app = express();
 const PORT = process.env.PORT || 5000;
-
-// Determine if running from compiled exe or dev
 const isPackaged = process.pkg !== undefined;
 const basePath = isPackaged ? path.dirname(process.execPath) : __dirname;
 
@@ -20,65 +18,65 @@ const basePath = isPackaged ? path.dirname(process.execPath) : __dirname;
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+
+let isSyncing = false;
+
 // Sync state management
 const stateFile = path.join(basePath, './sync_state.json');
 
-// Load all sync state data
 const loadAllSyncState = () => {
-  logger.checkpoint('[CHECKPOINT-LOAD-1] Loading sync state module');
+
   try {
     if (fs.existsSync(stateFile)) {
-      logger.success('[CHECKPOINT-LOAD-2] Found existing sync state file');
+
       const data = JSON.parse(fs.readFileSync(stateFile, 'utf8'));
-      logger.success(`[CHECKPOINT-LOAD-3] Loaded all table sync states`);
+
       return data;
     } else {
-      logger.warning('[CHECKPOINT-LOAD-4] No sync state file found, starting fresh');
+      logger.warning('No sync state file found, starting fresh');
       return { tables: {} };
     }
   } catch (error) {
-    logger.error('[CHECKPOINT-LOAD-ERROR] Error loading sync state: ' + error.message);
+    logger.error(' Error loading sync state: ' + error.message);
     return { tables: {} };
   }
 };
 
 // Load sync state for specific table
 const loadSyncState = (tableName) => {
-  logger.checkpoint(`[CHECKPOINT-LOAD-TABLE-1] Loading sync state for table: ${tableName}`);
+
   try {
     if (fs.existsSync(stateFile)) {
       const data = JSON.parse(fs.readFileSync(stateFile, 'utf8'));
       const tableData = data.tables?.[tableName];
 
       if (tableData) {
-        logger.success(`[CHECKPOINT-LOAD-TABLE-2] Found sync state for ${tableName}: ${tableData.lastId}`);
+
         return tableData.lastId || '';
       } else {
-        logger.warning(`[CHECKPOINT-LOAD-TABLE-3] No sync state for ${tableName}, starting from empty string`);
+        logger.warning(`No sync state for ${tableName}, starting from empty string`);
         return '';
       }
     } else {
-      logger.warning('[CHECKPOINT-LOAD-TABLE-4] No sync state file found');
+      logger.warning('No sync state file found');
       return '';
     }
   } catch (error) {
-    logger.error('[CHECKPOINT-LOAD-TABLE-ERROR] Error loading sync state: ' + error.message);
+    logger.error('Error loading sync state: ' + error.message);
     return '';
   }
 };
 
 // Save sync state for specific table
 const saveSyncState = (tableName, id) => {
-  logger.checkpoint(`[CHECKPOINT-SAVE-1] Saving sync state for table: ${tableName} with ID: ${id}`);
+
   try {
     let stateData = { tables: {} };
 
-    // Load existing state
     if (fs.existsSync(stateFile)) {
       stateData = JSON.parse(fs.readFileSync(stateFile, 'utf8'));
     }
 
-    // Update the specific table
     if (!stateData.tables) {
       stateData.tables = {};
     }
@@ -88,31 +86,32 @@ const saveSyncState = (tableName, id) => {
     };
 
     fs.writeFileSync(stateFile, JSON.stringify(stateData, null, 2));
-    logger.success(`[CHECKPOINT-SAVE-2] Sync state saved successfully`);
-    logger.success(`[CHECKPOINT-SAVE-3] File contents: ${JSON.stringify(stateData)}`);
+
   } catch (error) {
+
     logger.error('[CHECKPOINT-SAVE-ERROR] Error saving sync state: ' + error.message);
   }
 };
 
-// Fetch valid punches incrementally
+
 const fetchValidPunches = async (tableName, lastSyncId) => {
-  logger.checkpoint('[CHECKPOINT-8] Fetching records with EVTLGUID as primary key');
+
   try {
     const request = (await getPool()).request();
     const eventTypeInStr = process.env.EVENT_TYPE_IN || '4865,4867';
-    // Remove brackets if present and parse event types
+
     const cleanedStr = eventTypeInStr.replace(/[\[\]]/g, '');
     const eventTypes = cleanedStr.split(',').map(e => parseInt(e.trim())).filter(e => !isNaN(e));
-    logger.checkpoint(`[CHECKPOINT-8A] Filtering by event types: ${eventTypes.join(', ')}`);
-    
+
+
     if (eventTypes.length === 0) {
       logger.error('[CHECKPOINT-8B] No valid event types found in ENV');
       return [];
     }
-    
+
+    const batchSize = parseInt(process.env.BATCH_SIZE) || 70;
     const query = `
-      SELECT TOP 70 
+      SELECT TOP ${batchSize} 
         EVTLGUID as UniqueID,
         SRVDT as server_time,
         DEVDT as device_time, 
@@ -129,71 +128,112 @@ const fetchValidPunches = async (tableName, lastSyncId) => {
     request.input('lastId', sql.VarChar, lastSyncId.toString());
     const result = await request.query(query);
     const records = result.recordset;
-   
-    logger.success('records found: ' + JSON.stringify(records));
 
-    logger.success(`[CHECKPOINT-9] Found ${records.length} new records`);
-    if (records.length > 0) {
-      logger.success('[CHECKPOINT-11] First record: ' + JSON.stringify(records[0]));
-    }
+
     return records;
   } catch (error) {
-    logger.error('[CHECKPOINT-FETCH-ERROR]: ' + error.message);
+    logger.error('Data Not found in Database' + error.message);
     return [];
   }
 };
 
-// Push data to external API - one record at a time
 const pushToAPI = async (dataArray) => {
-  logger.checkpoint('[CHECKPOINT-API-1] pushToAPI module started');
 
   if (!dataArray || dataArray.length === 0) {
-    logger.warning('[CHECKPOINT-API-2] No data to push');
     return { success: true, successCount: 0, failedCount: 0, failed: [] };
   }
 
   const apiUrl = process.env.EXTERNAL_API_URL || 'API URL NO LOADED... CHECK ENV';
   const apiToken = process.env.EXTERNAL_API_TOKEN || '';
 
-  logger.checkpoint(`[CHECKPOINT-API-3] API URL: ${apiUrl}`);
-  logger.checkpoint(`[CHECKPOINT-API-4] Pushing ${dataArray.length} records one by one`);
+  const MAX_RETRIES = 3;
+  const RETRY_DELAY_MS = 2000;
 
   let successCount = 0;
   let failedCount = 0;
   const failedRecords = [];
 
-  // Process each record individually
+  const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+  const isInternalServerError = (error) => {
+    const httpStatus = error.response?.status;
+    const body = error.response?.data || {};
+    const bodyMessage = (body.message || '').toLowerCase();
+    const bodyStatusCode = String(body.statusCode || '');
+    const bodyStatus = (body.status || '').toLowerCase();
+    const errorMessage = (error.message || '').toLowerCase();
+
+    // Match HTTP 5xx
+    if (httpStatus && httpStatus >= 500) return true;
+    // Match exact API response: { message: "internal server error.", status: "failed", statusCode: "500" }
+    if (bodyStatusCode === '500') return true;
+    if (bodyStatus === 'failed' && bodyMessage.includes('internal server error')) return true;
+    // Fallback: message contains internal server error
+    if (errorMessage.includes('internal server error')) return true;
+
+    return false;
+  };
+
   for (let i = 0; i < dataArray.length; i++) {
     const record = dataArray[i];
-    try {
-      logger.checkpoint(`[CHECKPOINT-API-RECORD-${i}] Pushing record ${i + 1}/${dataArray.length}: EmployeeID=${record.EmployeeID}`);
+    let pushed = false;
+    let lastError = null;
+    let retriedAtLeastOnce = false;
 
-      const response = await axios.post(apiUrl, record, {
-        headers: {
-          'Token': apiToken,
-          'Content-Type': 'application/json',
-          'CompanyCode': 'RAMP360'
-        },
-        timeout: 30000
-      });
+    for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+      try {
+        const response = await axios.post(apiUrl, record, {
+          headers: {
+            'Token': apiToken,
+            'Content-Type': 'application/json',
+            'CompanyCode': 'RAMP360'
+          },
+          timeout: 30000
+        });
 
-      logger.success(`[CHECKPOINT-API-SUCCESS-${i}] Record ${i + 1} pushed successfully. Status: ${response.status}`);
-      successCount++;
-    } catch (error) {
+        const httpStatus = response.status;
+        const resMessage = response.data?.message || 'OK';
+
+        // Recovered after retry
+        if (retriedAtLeastOnce) {
+          logger.success(`[API-RETRY-SUCCESS] EmployeeID: ${record.EmployeeID}, UniqueID: ${record.UniqueID} — recovered on attempt ${attempt} | Status: ${httpStatus} | Message: ${resMessage}`);
+        } else {
+          // Normal first-attempt success
+          logger.success(`[API-SUCCESS] EmployeeID: ${record.EmployeeID}, UniqueID: ${record.UniqueID} | Status: ${httpStatus} | Message: ${resMessage}`);
+        }
+
+        successCount++;
+        pushed = true;
+        break;
+
+      } catch (error) {
+        lastError = error.response?.data?.message || error.message || 'Unknown error';
+        const status = error.response?.status || 'N/A';
+
+        if (!isInternalServerError(error)) {
+          // Normal error (4xx etc.) — log with status and message
+          logger.error(`[API-ERROR] EmployeeID: ${record.EmployeeID}, UniqueID: ${record.UniqueID} | Status: ${status} | Message: ${lastError}`);
+          break;
+        }
+
+        // Internal server error — retry
+        retriedAtLeastOnce = true;
+        if (attempt < MAX_RETRIES) {
+          logger.warning(`[API-RETRY] EmployeeID: ${record.EmployeeID}, UniqueID: ${record.UniqueID} — attempt ${attempt}/${MAX_RETRIES} | Status: ${status} | Message: ${lastError}, retrying in ${RETRY_DELAY_MS}ms...`);
+          await delay(RETRY_DELAY_MS);
+        }
+      }
+    }
+
+    if (!pushed) {
       failedCount++;
-      const errorMsg = error.response?.data?.message || error.message || 'Unknown error';
-      logger.error(`[CHECKPOINT-API-FAILED-${i}] Record ${i + 1} failed. Employee: ${record.EmployeeID}, Error: ${errorMsg}`);
-
-      // Store failed record for later analysis
-      failedRecords.push({
-        index: i,
-        record: record,
-        error: errorMsg
-      });
+      // Only log EmployeeID and UniqueID if it was an internal server error that exhausted all retries
+      if (retriedAtLeastOnce) {
+        logger.error(`[API-FAILED] EmployeeID: ${record.EmployeeID}, UniqueID: ${record.UniqueID}`);
+      }
+      failedRecords.push({ index: i, record: record, error: lastError });
     }
   }
-
-  logger.success(`[CHECKPOINT-API-SUMMARY] Push completed - Success: ${successCount}, Failed: ${failedCount}`);
 
   return {
     success: failedCount === 0,
@@ -205,11 +245,16 @@ const pushToAPI = async (dataArray) => {
 
 // Main sync job
 const syncAttendance = async () => {
-  logger.checkpoint('[CHECKPOINT-1] Starting syncAttendance module');
+  // logger.checkpoint('[CHECKPOINT-1] Starting syncAttendance module');
 
+  if (isSyncing) {
+    logger.warning('[SYNC-SKIP] Previous sync still running, skipping this cycle.');
+    return;
+  }
+
+  isSyncing = true;
   try {
-    // Check license validity first
-    logger.checkpoint('[CHECKPOINT-LICENSE-CHECK] Checking license validity before sync');
+
     if (!isLicenseValid()) {
       logger.error('[CHECKPOINT-LICENSE-INVALID] ❌ SYNC BLOCKED: License is not valid');
       const status = getLicenseStatus();
@@ -218,41 +263,37 @@ const syncAttendance = async () => {
       process.exit(1);
     }
     logger.success('[CHECKPOINT-LICENSE-OK] ✓ License is valid, proceeding with sync');
-    
-    logger.checkpoint('[CHECKPOINT-2] Getting current table name');
+
+
     const now = new Date();
     const tableName = getTableName(now.getFullYear(), now.getMonth() + 1);
-    logger.success(`[CHECKPOINT-3] Using table: ${tableName}`);
+    logger.success(` table: ${tableName}`);
 
     // Load sync state for this specific table
     const lastSyncId = loadSyncState(tableName);
-    logger.success(`[CHECKPOINT-4] Current lastSyncId for ${tableName}: ${lastSyncId}`);
+    // logger.success(`[CHECKPOINT-4] Current lastSyncId for ${tableName}: ${lastSyncId}`);
 
-    logger.checkpoint('[CHECKPOINT-5] Checking if table exists');
+    // logger.checkpoint('[CHECKPOINT-5] Checking if table exists');
     const exists = await tableExists(tableName);
 
     if (!exists) {
       logger.error(`[CHECKPOINT-6] Table ${tableName} not found`);
       return;
     }
-    logger.success('[CHECKPOINT-7] Table exists');
 
-    // Fetch records using function with table-specific sync ID
+
     const records = await fetchValidPunches(tableName, lastSyncId);
 
     if (records.length === 0) {
-      logger.success('[CHECKPOINT-10] No new records to process');
+      logger.success(' No new records to process');
       return;
     }
 
     // Update sync state with last EVTLGUID for this table
     const maxId = records[records.length - 1].UniqueID;
-    logger.checkpoint(`[CHECKPOINT-12] Saving sync state with maxId: ${maxId}`);
+    // logger.checkpoint(`[CHECKPOINT-12] Saving sync state with maxId: ${maxId}`);
     saveSyncState(tableName, maxId);
-    logger.success(`[CHECKPOINT-13] Updated sync state for ${tableName} to EVTLGUID: ${maxId}`);
 
-    // Transform data for API
-    logger.checkpoint('[CHECKPOINT-14] Transforming data for API');
 
 
     const deviceInIds = (process.env.DEVICE_IN || '').split(',').map(id => id.trim());
@@ -276,34 +317,26 @@ const syncAttendance = async () => {
         EmployeeID: String(record.user_id || 'n/a'),
         AttendanceDateTime: formattedDateTime,
         ioFlag: ioFlag,
-        UniqueID: String(record.UniqueID),
+        UniqueID: parseInt(tableName.replace('T_LG', '').slice(-4) + String(record.UniqueID)),
         IsDuplicate: "N"
       };
     });
 
-    //fake date time for testing
 
-
-
-    logger.success('[CHECKPOINT-15] Data transformed, sample: ' + JSON.stringify(transformedData[0]));
-    logger.success(`[CHECKPOINT-16] Ready to push ${transformedData.length} records to API`);
-
-    // Push to API - one record at a time
-    logger.checkpoint('[CHECKPOINT-17] Calling API push');
     const pushResult = await pushToAPI(transformedData);
 
     if (pushResult.success) {
-      logger.success(`[CHECKPOINT-18] All ${pushResult.successCount} records pushed successfully`);
+      logger.success(`Sucess Result ${pushResult.successCount} `);
     } else {
-      logger.warning(`[CHECKPOINT-18] Some records failed - Success: ${pushResult.successCount}, Failed: ${pushResult.failedCount}`);
-      if (pushResult.failed.length > 0) {
-        logger.warning('[CHECKPOINT-FAILED-RECORDS] Failed records: ' + JSON.stringify(pushResult.failed));
-      }
+      logger.warning(`Failed Result: ${pushResult.failedCount}`);
+
     }
 
   } catch (error) {
     logger.error('[CHECKPOINT-ERROR] Sync error in module: ' + error.message);
     logger.error('[CHECKPOINT-ERROR] Stack: ' + error.stack);
+  } finally {
+    isSyncing = false;
   }
 };
 
@@ -694,54 +727,64 @@ const start = async () => {
     // Status endpoint
     app.get('/status', (req, res) => {
       const syncStates = loadAllSyncState();
-      res.status(200).json({ 
-        status: 'running', 
-        tables: Object.keys(syncStates.tables || {}) 
+      res.status(200).json({
+        status: 'running',
+        tables: Object.keys(syncStates.tables || {})
       });
     });
 
     // Manual sync endpoint
     app.post('/manual-sync', async (req, res) => {
       try {
+        if (isSyncing) {
+          return res.status(429).json({
+            success: false,
+            successCount: 0,
+            failedCount: 0,
+            error: 'Sync already in progress. Please wait for it to complete.'
+          });
+        }
+
+        isSyncing = true;
         // Check license validity first
-        logger.checkpoint('[MANUAL-SYNC-LICENSE] Checking license validity');
+        // logger.checkpoint('[MANUAL-SYNC-LICENSE] Checking license validity');
         if (!isLicenseValid()) {
           logger.error('[MANUAL-SYNC-LICENSE-INVALID] ❌ SYNC BLOCKED: License is not valid');
           const status = getLicenseStatus();
           logger.error('[MANUAL-SYNC-LICENSE-EXIT] Exiting process due to invalid license...');
           process.exit(1);
         }
-        logger.success('[MANUAL-SYNC-LICENSE-OK] ✓ License is valid');
-        
+        // logger.success('[MANUAL-SYNC-LICENSE-OK] ✓ License is valid');
+
         const dateParam = req.body?.date;
-        
+
         // Set custom date for logging if provided
         if (dateParam) {
           logger.setCustomDate(new Date(dateParam));
         }
-        
-        logger.checkpoint('[MANUAL-SYNC] Manual sync triggered by user' + (dateParam ? ' for date: ' + dateParam : ''));
-        
+
+        // logger.checkpoint('[MANUAL-SYNC] Manual sync triggered by user' + (dateParam ? ' for date: ' + dateParam : ''));
+
         // Parse selected date and generate table name from it
         let selectedDate = new Date();
         if (dateParam) {
           selectedDate = new Date(dateParam);
         }
-        
+
         const year = selectedDate.getFullYear();
         const month = selectedDate.getMonth() + 1;
         const tableName = getTableName(year, month);
-        logger.checkpoint(`[MANUAL-SYNC] Generated table name: ${tableName} from date: ${selectedDate.toDateString()}`);
-        
+        // logger.checkpoint(`[MANUAL-SYNC] Generated table name: ${tableName} from date: ${selectedDate.toDateString()}`);
+
         const lastSyncId = loadSyncState(tableName);
         const exists = await tableExists(tableName);
-        
+
         if (!exists) {
-          return res.status(404).json({ 
-            success: false, 
-            successCount: 0, 
+          return res.status(404).json({
+            success: false,
+            successCount: 0,
             failedCount: 0,
-            error: `Table ${tableName} not found for date ${selectedDate.toDateString()}` 
+            error: `Table ${tableName} not found for date ${selectedDate.toDateString()}`
           });
         }
 
@@ -750,16 +793,16 @@ const start = async () => {
         const dateEnd = new Date(year, selectedDate.getMonth(), selectedDate.getDate() + 1);
         const unixStart = Math.floor(dateStart.getTime() / 1000);
         const unixEnd = Math.floor(dateEnd.getTime() / 1000);
-        
-        logger.checkpoint(`[MANUAL-SYNC] Date range: ${dateStart.toISOString()} to ${dateEnd.toISOString()}`);
-        logger.checkpoint(`[MANUAL-SYNC] Unix timestamp range: ${unixStart} to ${unixEnd}`);
+
+        // logger.checkpoint(`[MANUAL-SYNC] Date range: ${dateStart.toISOString()} to ${dateEnd.toISOString()}`);
+        // logger.checkpoint(`[MANUAL-SYNC] Unix timestamp range: ${unixStart} to ${unixEnd}`);
 
         // Fetch records from selected date
         const request = (await getPool()).request();
         const eventTypeInStr = process.env.EVENT_TYPE_IN || '4865,4867';
         const cleanedStr = eventTypeInStr.replace(/[\[\]]/g, '');
         const eventTypes = cleanedStr.split(',').map(e => parseInt(e.trim())).filter(e => !isNaN(e));
-        
+
         const query = `
           SELECT TOP 50 
             EVTLGUID as UniqueID,
@@ -780,19 +823,19 @@ const start = async () => {
         request.input('lastId', sql.VarChar, lastSyncId.toString());
         request.input('dateStart', sql.BigInt, unixStart);
         request.input('dateEnd', sql.BigInt, unixEnd);
-        
-        logger.checkpoint(`[MANUAL-SYNC] Executing query with date filter...`);
+
+        // logger.checkpoint(`[MANUAL-SYNC] Executing query with date filter...`);
         const result = await request.query(query);
         const records = result.recordset;
 
-        logger.success(`[MANUAL-SYNC] Found ${records.length} records for date ${selectedDate.toDateString()}`);
+        // logger.success(`[MANUAL-SYNC] Found ${records.length} records for date ${selectedDate.toDateString()}`);
 
         if (records.length === 0) {
-          return res.json({ 
-            success: true, 
-            successCount: 0, 
+          return res.json({
+            success: true,
+            successCount: 0,
             failedCount: 0,
-            message: `No records found for date ${selectedDate.toDateString()}` 
+            message: `No records found for date ${selectedDate.toDateString()}`
           });
         }
 
@@ -819,26 +862,28 @@ const start = async () => {
             EmployeeID: String(record.user_id || 'n/a'),
             AttendanceDateTime: formattedDateTime,
             ioFlag: ioFlag,
-            UniqueID: String(record.UniqueID),
+            UniqueID: parseInt(tableName.replace('T_LG', '') + String(record.UniqueID)),
             IsDuplicate: "N"
           };
         });
 
         // Push to API
-        logger.checkpoint(`[MANUAL-SYNC] Pushing ${transformedData.length} records to API from table ${tableName}`);
+        // logger.checkpoint(`[MANUAL-SYNC] Pushing ${transformedData.length} records to API from table ${tableName}`);
         const pushResult = await pushToAPI(transformedData);
 
-        logger.success(`[MANUAL-SYNC-COMPLETE] Manual sync completed successfully`);
+        // logger.success(`[MANUAL-SYNC-COMPLETE] Manual sync completed successfully`);
         logger.resetCustomDate();
+        isSyncing = false;
         res.json(pushResult);
       } catch (error) {
         logger.error('[MANUAL-SYNC-ERROR] ' + error.message);
         logger.resetCustomDate();
-        res.status(500).json({ 
-          success: false, 
-          successCount: 0, 
+        isSyncing = false;
+        res.status(500).json({
+          success: false,
+          successCount: 0,
           failedCount: 0,
-          error: error.message 
+          error: error.message
         });
       }
     });
@@ -855,7 +900,7 @@ const start = async () => {
 
     // Initialize license system
     logger.checkpoint('[APP-STARTUP] License system initialized - Expiry: 2026-03-31');
-    
+
     if (!isLicenseValid()) {
       logger.error('[APP-STARTUP] ❌ LICENSE INVALID - Application cannot start');
       const licenseStatus = getLicenseStatus();
@@ -864,30 +909,30 @@ const start = async () => {
       logger.error('[APP-STARTUP] Exiting process...');
       process.exit(1);
     }
-    
+
     logger.success('[APP-STARTUP] ✓ License is valid - Application starting');
 
     await connectDB();
     const syncStates = loadAllSyncState();
-    logger.success('Loaded sync states for tables: ' + Object.keys(syncStates.tables || {}));
+    // logger.success('Loaded sync states for tables: ' + Object.keys(syncStates.tables || {}));
 
-    logger.rocket('Attendance Sync System Started');
-    logger.calendar('Running every 5 minutes');
+    const cronSchedule = process.env.CRON_SCHEDULE || '*/5 * * * *';
+    // logger.rocket('Attendance Sync System Started');
+    // logger.calendar(`Running on schedule: ${cronSchedule}`);
 
-    // Schedule every 5 minutes
-    cron.schedule('*/5 * * * *', syncAttendance);
+    cron.schedule(cronSchedule, syncAttendance);
 
     // Run initial sync
-    logger.info('initial sync')
+    // logger.info('initial sync')
     await syncAttendance();
 
   } catch (error) {
     logger.warning('Database connection failed - will retry on schedule');
 
-    // Still start the scheduler even if DB connection fails
-    logger.rocket('Attendance Sync System Started (DB retry mode)');
-    logger.calendar('Running every 5 minutes');
-    cron.schedule('*/5 * * * *', syncAttendance);
+    const cronSchedule = process.env.CRON_SCHEDULE || '*/5 * * * *';
+    // logger.rocket('Attendance Sync System Started (DB retry mode)');
+    // logger.calendar(`Running on schedule: ${cronSchedule}`);
+    cron.schedule(cronSchedule, syncAttendance);
   }
 };
 

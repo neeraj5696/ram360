@@ -1,116 +1,57 @@
 const fs = require('fs');
 const path = require('path');
 
-// Determine if running from compiled exe or dev
 const isPackaged = process.pkg !== undefined;
 const basePath = isPackaged ? path.dirname(process.execPath) : path.join(__dirname, '..');
-
-// Create logs directory if it doesn't exist
 const logsDir = path.join(basePath, 'logs');
-try {
-  if (!fs.existsSync(logsDir)) {
-    fs.mkdirSync(logsDir, { recursive: true });
-  }
-} catch (error) {
-  // If we can't create the logs directory, use a temp location
-  console.error('Cannot create logs directory:', error.message);
-}
 
-// Track custom date for manual sync logging
+if (!fs.existsSync(logsDir)) fs.mkdirSync(logsDir, { recursive: true });
+
 let customDate = null;
 
-// Get formatted date (YYYY-MM-DD)
-const getFormattedDate = (dateObj = null) => {
-  const now = dateObj || new Date();
-  const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, '0');
-  const day = String(now.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
+const C = {
+  reset: '\x1b[0m',
+  dim:   '\x1b[2m',
+  cyan:  '\x1b[36m',
+  green: '\x1b[32m',
+  yellow:'\x1b[33m',
+  red:   '\x1b[31m',
+  blue:  '\x1b[34m',
+  magenta:'\x1b[35m',
 };
 
-// Get formatted timestamp (HH:MM:SS)
-const getFormattedTime = () => {
-  const now = new Date();
-  const hours = String(now.getHours()).padStart(2, '0');
-  const minutes = String(now.getMinutes()).padStart(2, '0');
-  const seconds = String(now.getSeconds()).padStart(2, '0');
-  return `${hours}:${minutes}:${seconds}`;
+const ts = () => {
+  const n = new Date();
+  return `${String(n.getHours()).padStart(2,'0')}:${String(n.getMinutes()).padStart(2,'0')}:${String(n.getSeconds()).padStart(2,'0')}`;
 };
 
-// Set custom date for manual sync logging
-const setCustomDate = (dateObj) => {
-  customDate = dateObj;
+const dateStr = (d = null) => {
+  const n = d || new Date();
+  return `${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,'0')}-${String(n.getDate()).padStart(2,'0')}`;
 };
 
-// Reset custom date after sync completes
-const resetCustomDate = () => {
-  customDate = null;
-};
-
-// Get log file path based on current date or custom date
-const getLogFilePath = () => {
-  const dateStr = customDate ? getFormattedDate(customDate) : getFormattedDate();
-  return path.join(logsDir, `${dateStr}.log`);
-};
-
-// Write log to file
-const writeToFile = (message) => {
+const writeToFile = (level, message) => {
   try {
-    const logFilePath = getLogFilePath();
-    const timestamp = getFormattedTime();
-    const logMessage = `[${timestamp}] ${message}\n`;
-    fs.appendFileSync(logFilePath, logMessage, 'utf8');
-  } catch (error) {
-    console.error('Error writing to log file:', error.message);
-  }
+    const file = path.join(logsDir, `${customDate ? dateStr(customDate) : dateStr()}.log`);
+    fs.appendFileSync(file, `[${ts()}] ${level.padEnd(7)} ${message}\n`, 'utf8');
+  } catch {}
 };
 
-// Logger object with different log levels
+const log = (icon, color, level, message, fn = console.log) => {
+  fn(`${C.dim}${ts()}${C.reset} ${color}${icon} ${message}${C.reset}`);
+  writeToFile(level, message);
+};
+
 const logger = {
-  info: (message) => {
-    const msg = `ℹ️  ${message}`;
-    console.log(msg);
-    writeToFile(msg);
-  },
-  
-  success: (message) => {
-    const msg = `✅ ${message}`;
-    console.log(msg);
-    writeToFile(msg);
-  },
-  
-  warning: (message) => {
-    const msg = `⚠️  ${message}`;
-    console.log(msg);
-    writeToFile(msg);
-  },
-  
-  error: (message) => {
-    const msg = `❌ ${message}`;
-    console.error(msg);
-    writeToFile(msg);
-  },
-  
-  checkpoint: (message) => {
-    const msg = `🔄 ${message}`;
-    console.log(msg);
-    writeToFile(msg);
-  },
-  
-  rocket: (message) => {
-    const msg = `🚀 ${message}`;
-    console.log(msg);
-    writeToFile(msg);
-  },
-  
-  calendar: (message) => {
-    const msg = `📅 ${message}`;
-    console.log(msg);
-    writeToFile(msg);
-  },
-  
-  setCustomDate: setCustomDate,
-  resetCustomDate: resetCustomDate
+  info:       (m) => log('ℹ', C.cyan,    'INFO',    m),
+  success:    (m) => log('✔', C.green,   'OK',      m),
+  warning:    (m) => log('⚠', C.yellow,  'WARN',    m),
+  error:      (m) => log('✖', C.red,     'ERROR',   m, console.error),
+  checkpoint: (m) => log('›', C.blue,    'STEP',    m),
+  rocket:     (m) => log('🚀', C.magenta, 'START',   m),
+  calendar:   (m) => log('📅', C.cyan,    'SCHED',   m),
+  setCustomDate:  (d) => { customDate = d; },
+  resetCustomDate:()  => { customDate = null; },
 };
 
 module.exports = logger;

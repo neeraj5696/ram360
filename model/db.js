@@ -38,7 +38,7 @@ const connectDB = async () => {
     }
     pool = await new sql.ConnectionPool(config).connect();
     pool.on('error', err => console.error('❌ Pool error:', err.message));
-    console.log('✅ Database pool connected successfully!');
+    // console.log('✅ Database pool connected successfully!');
     return pool;
   } catch (error) {
     console.error('❌ Database connection failed:', error);
@@ -55,8 +55,8 @@ const getPool = async () => {
 
 const getTableName = (year, month) => {
   // Format month as 2 digits (01-12)
-  const monthStr = String(month).padStart(2, '0');
-  console.log(`Generated table name for ${year}-${month}: T_LG${year}${monthStr}`);
+  const monthStr = String(month-1).padStart(2, '0');
+  // console.log(`Generated table name for ${year}-${month}: T_LG${year}${monthStr}`);
   return `T_LG${year}${monthStr}`;
 };
 
@@ -65,13 +65,13 @@ const getTableName = (year, month) => {
 const fetchDataByMonth = async (year, month, columnName = '*') => {
   try {
     const tableName = getTableName(year, month);
-    console.log(`Table is ready, start...: ${tableName}`);
+    // console.log(`Table is ready, start...: ${tableName}`);
 
     const request = (await getPool()).request();
     const query = `SELECT ${columnName} FROM [${tableName}]`;
 
     const result = await request.query(query);
-    console.log(`✅ Data fetched successfully from ${tableName}! Rows: ${result.recordset.length}`);
+    // console.log(`✅ Data fetched successfully from ${tableName}! Rows: ${result.recordset.length}`);
     return result.recordset;
   } catch (error) {
     console.error(`❌ Error fetching data from table:`, error.message);
@@ -161,11 +161,11 @@ const createTableIfNotExists = async (destTableName, sourceTableName) => {
     const exists = await tableExists(destTableName);
     
     if (exists) {
-      console.log(`✅ Table [${destTableName}] already exists`);
+      // console.log(`✅ Table [${destTableName}] already exists`);
       return true;
     }
 
-    console.log(`Creating table [${destTableName}] based on [${sourceTableName}]...`);
+    // console.log(`Creating table [${destTableName}] based on [${sourceTableName}]...`);
     
     const request = (await getPool()).request();
     const createQuery = `
@@ -175,7 +175,7 @@ const createTableIfNotExists = async (destTableName, sourceTableName) => {
     `;
     
     await request.query(createQuery);
-    console.log(`✅ Table [${destTableName}] created successfully!`);
+    // console.log(`✅ Table [${destTableName}] created successfully!`);
     return true;
   } catch (error) {
     console.error(`❌ Error creating table:`, error.message);
@@ -187,7 +187,7 @@ const createTableIfNotExists = async (destTableName, sourceTableName) => {
 const insertDataIntoTable = async (destTableName, data) => {
   try {
     if (!data || data.length === 0) {
-      console.log('⚠️ No data to insert');
+      // console.log('⚠️ No data to insert');
       return { inserted: 0 };
     }
 
@@ -219,7 +219,7 @@ const insertDataIntoTable = async (destTableName, data) => {
       insertedCount++;
     }
 
-    console.log(`✅ Successfully inserted ${insertedCount} rows into [${destTableName}]`);
+    // console.log(`✅ Successfully inserted ${insertedCount} rows into [${destTableName}]`);
     return { inserted: insertedCount };
   } catch (error) {
     console.error(`❌ Error inserting data:`, error.message);
@@ -236,8 +236,8 @@ const fetchAndWriteCurrentMonthData = async (destTableName) => {
     const month = now.getMonth() + 1;
     const sourceTableName = getTableName(year, month);
 
-    console.log(`\n📋 Starting fetch and write process...`);
-    console.log(`Source: [${sourceTableName}] | Destination: [${destTableName}]\n`);
+    // console.log(`\n📋 Starting fetch and write process...`);
+    // console.log(`Source: [${sourceTableName}] | Destination: [${destTableName}]\n`);
 
     // Fetch data from source
     const data = await fetchDataByMonth(year, month);
@@ -265,15 +265,15 @@ const fetchAndWriteCurrentMonthData = async (destTableName) => {
 const startAutoFetchScheduler = (intervalMinutes = 5) => {
   const intervalMs = intervalMinutes * 60 * 1000;
   
-  console.log(`⏰ Starting auto-fetch scheduler: Every ${intervalMinutes} minutes`);
+  // console.log(`⏰ Starting auto-fetch scheduler: Every ${intervalMinutes} minutes`);
   
   // Run immediately on start
   const runFetch = async () => {
     try {
       const timestamp = new Date().toLocaleString();
-      console.log(`\n📅 [${timestamp}] Running scheduled fetch...`);
+      // console.log(`\n📅 [${timestamp}] Running scheduled fetch...`);
       const result = await fetchAndWriteCurrentMonthData('filteredattendance');
-      console.log(`✅ Scheduled fetch completed: ${result.totalInserted} rows inserted\n`);
+      // console.log(`✅ Scheduled fetch completed: ${result.totalInserted} rows inserted\n`);
     } catch (error) {
       console.error(`❌ Scheduled fetch failed: ${error.message}\n`);
     }
